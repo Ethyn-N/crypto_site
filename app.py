@@ -204,18 +204,41 @@ def get_key_from_request(request_form, key_option_field='key_option'):
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('login.html', form=LoginForm())
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    # Initialize form on both GET and POST requests
     form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
+    
+    # Handle form submission
+    if request.method == 'POST':
+        # Check if the necessary fields exist in the form data
+        if 'username' not in request.form or 'password' not in request.form:
+            flash('Please fill in all required fields', 'danger')
+            return render_template('login.html', form=form)
+        
+        username = request.form['username']
+        password = request.form['password']
+        
+        # Check if fields are empty
+        if not username or not password:
+            flash('Username and password are required', 'danger')
+            return render_template('login.html', form=form)
+        
+        # Check credentials
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get('next')
             return redirect(next_page or url_for('dashboard'))
-        flash('Invalid username or password', 'danger')
+        else:
+            flash('Invalid username or password', 'danger')
+    
+    # Render the template for both GET requests and failed POST attempts
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
