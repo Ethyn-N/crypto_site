@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Hashes - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Compare Hashes</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="hash_method" class="form-label">Hash Method:</label>
+                        {{ form.hash_method(class="form-select") }}
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>First Hash</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="first_hash_option" id="first_hash_option_file" value="file" checked>
+                                    <label class="form-check-label" for="first_hash_option_file">
+                                        Upload a file to hash
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="first_hash_option" id="first_hash_option_value" value="value">
+                                    <label class="form-check-label" for="first_hash_option_value">
+                                        Enter hash value directly
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="first_file_section">
+                                <div class="mb-3">
+                                    <label for="file1" class="form-label">First File:</label>
+                                    {{ form.file1(class="form-control") }}
+                                </div>
+                            </div>
+                            
+                            <div id="first_hash_section" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="hash1" class="form-label">First Hash Value:</label>
+                                    {{ form.hash1(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Second Hash</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="second_hash_option" id="second_hash_option_file" value="file" checked>
+                                    <label class="form-check-label" for="second_hash_option_file">
+                                        Upload a file to hash
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="second_hash_option" id="second_hash_option_value" value="value">
+                                    <label class="form-check-label" for="second_hash_option_value">
+                                        Enter hash value directly
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="second_file_section">
+                                <div class="mb-3">
+                                    <label for="file2" class="form-label">Second File:</label>
+                                    {{ form.file2(class="form-control") }}
+                                </div>
+                            </div>
+                            
+                            <div id="second_hash_section" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="hash2" class="form-label">Second Hash Value:</label>
+                                    {{ form.hash2(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Compare Hashes</button>
+                    <a href="/dashboard" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Comparison Result</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-{{ 'success' if result.match else 'danger' }}">
+                    {% if result.match %}
+                    <strong>Match!</strong> The hashes are identical. The files/values are cryptographically the same.
+                    {% else %}
+                    <strong>No Match!</strong> The hashes are different. The files/values are not the same.
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Hash Method:</strong> {{ result.method }}
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">First Hash:</label>
+                    <div class="hash-result">{{ result.hash1 }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Second Hash:</label>
+                    <div class="hash-result">{{ result.hash2 }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const firstHashOptionFile = document.getElementById('first_hash_option_file');
+    const firstHashOptionValue = document.getElementById('first_hash_option_value');
+    const firstFileSection = document.getElementById('first_file_section');
+    const firstHashSection = document.getElementById('first_hash_section');
+    
+    const secondHashOptionFile = document.getElementById('second_hash_option_file');
+    const secondHashOptionValue = document.getElementById('second_hash_option_value');
+    const secondFileSection = document.getElementById('second_file_section');
+    const secondHashSection = document.getElementById('second_hash_section');
+    
+    function updateFirstHashOption() {
+        if (firstHashOptionFile.checked) {
+            firstFileSection.style.display = 'block';
+            firstHashSection.style.display = 'none';
+        } else {
+            firstFileSection.style.display = 'none';
+            firstHashSection.style.display = 'block';
+        }
+    }
+    
+    function updateSecondHashOption() {
+        if (secondHashOptionFile.checked) {
+            secondFileSection.style.display = 'block';
+            secondHashSection.style.display = 'none';
+        } else {
+            secondFileSection.style.display = 'none';
+            secondHashSection.style.display = 'block';
+        }
+    }
+    
+    firstHashOptionFile.addEventListener('change', updateFirstHashOption);
+    firstHashOptionValue.addEventListener('change', updateFirstHashOption);
+    secondHashOptionFile.addEventListener('change', updateSecondHashOption);
+    secondHashOptionValue.addEventListener('change', updateSecondHashOption);
+    
+    // Initialize
+    updateFirstHashOption();
+    updateSecondHashOption();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Decrypt File - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Decrypt File</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Encrypted File:</label>
+                        {{ form.file(class="form-control") }}
+                        {% if form.file.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.file.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Upload a file previously encrypted with this system</div>
+                    </div>
+                    
+                    <div class="mb-3" id="verify_section">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="verify_signature" name="verify_signature" value="1">
+                            <label class="form-check-label" for="verify_signature">
+                                Verify file signature (if signed)
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            If the file was signed, this verifies the sender's identity using their public key.
+                        </div>
+                    </div>
+                    
+                    <div id="verification_key_section">
+                        <div class="mb-3">
+                            <label for="verification_key" class="form-label">Select Verification Key:</label>
+                            <select class="form-select" id="verification_key" name="verification_key">
+                                <option value="">-- Select sender's public key --</option>
+                                {% if asymmetric_keys %}
+                                <optgroup label="Your Public Keys">
+                                    {% for key in asymmetric_keys %}
+                                    <option value="{{ key.id }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                                
+                                {% if shared_public_keys %}
+                                <optgroup label="Shared Public Keys">
+                                    {% for key in shared_public_keys %}
+                                    <option value="shared_{{ key.id }}">
+                                        {{ key.name }} (from {{ key.owner.username }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                            <div class="form-text">
+                                Choose the sender's public key to verify their signature.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="key_section">
+                        <label class="form-label">Key Selection:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_existing" value="existing" checked>
+                            <label class="form-check-label" for="key_option_existing">
+                                Use an existing key
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_manual" value="manual">
+                            <label class="form-check-label" for="key_option_manual">
+                                Enter key manually
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="existing_key_section">
+                        <div class="mb-3">
+                            <label for="existing_key" class="form-label">Select Key:</label>
+                            <select class="form-select" id="existing_key" name="existing_key">
+                                <option value="">-- Select a key --</option>
+                                {% if symmetric_keys %}
+                                <optgroup label="Symmetric Keys">
+                                    {% for key in symmetric_keys %}
+                                    <option value="sym_{{ key.id }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                                
+                                {% if asymmetric_keys %}
+                                <optgroup label="Asymmetric Keys (Private Keys)">
+                                    {% for key in asymmetric_keys %}
+                                    <option value="asym_{{ key.id }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="manual_key_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="manual_key" class="form-label">Enter Key:</label>
+                            <textarea class="form-control" id="manual_key" name="manual_key" rows="4"></textarea>
+                            <div class="form-text">Paste your decryption key here</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="save_output" class="form-check-label">
+                            <input type="checkbox" class="form-check-input" id="save_output" name="save_output" value="1" checked>
+                            Save decrypted file to my account
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Decrypt</button>
+                    <a href="/dashboard" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Decryption Result</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    Your file has been decrypted successfully.
+                </div>
+                
+                <div class="mb-3 row">
+                    <div class="col-md-6">
+                        <strong>Original Filename:</strong> {{ result.original_filename }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Decrypted Filename:</strong> {{ result.decrypted_filename }}
+                    </div>
+                </div>
+                
+                <div class="mb-3 row">
+                    <div class="col-md-6">
+                        <strong>Encryption Method:</strong> {{ result.method }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Key Used:</strong> {{ result.key_name or 'Manual key' }}
+                    </div>
+                </div>
+                
+                {% if result.signature_verified is not none %}
+                <div class="mb-3">
+                    <strong>Signature Verification:</strong>
+                    {% if result.signature_verified %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Signature verified - This file was authentically encrypted by the sender.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle"></i> Signature verification failed - This file may have been tampered with or the wrong verification key was used.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="d-flex gap-2 mt-4">
+                    {% if result.is_saved %}
+                    <a href="/files/{{ result.file_id }}/download" class="btn btn-primary">Download Decrypted File</a>
+                    <a href="/files" class="btn btn-outline-secondary">View My Files</a>
+                    {% else %}
+                    <a href="/download_decrypted/{{ result.file_id }}" class="btn btn-primary">Download Decrypted File</a>
+                    <div class="alert alert-info mt-2 w-100">
+                        <small>This file is not saved to your account. The download link will expire when you log out.</small>
+                    </div>
+                    {% endif %}
+                    <a href="/decrypt" class="btn btn-secondary">Decrypt Another File</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keyOptionExisting = document.getElementById('key_option_existing');
+    const keyOptionManual = document.getElementById('key_option_manual');
+    const existingKeySection = document.getElementById('existing_key_section');
+    const manualKeySection = document.getElementById('manual_key_section');
+    const keySection = document.getElementById('key_section');
+    const verifySignatureCheckbox = document.getElementById('verify_signature');
+    const verificationKeySection = document.getElementById('verification_key_section');
+
+    function updateKeyOptions() {
+        if (keyOptionExisting.checked) {
+            existingKeySection.style.display = 'block';
+            manualKeySection.style.display = 'none';
+        } else if (keyOptionManual.checked) {
+            existingKeySection.style.display = 'none';
+            manualKeySection.style.display = 'block';
+        }
+    }
+
+    function updateVisibilityBasedOnSignature() {
+        const showKeyInputs = !verifySignatureCheckbox.checked;
+        verificationKeySection.style.display = verifySignatureCheckbox.checked ? 'block' : 'none';
+        keySection.style.display = showKeyInputs ? 'block' : 'none';
+        existingKeySection.style.display = (showKeyInputs && keyOptionExisting.checked) ? 'block' : 'none';
+        manualKeySection.style.display = (showKeyInputs && keyOptionManual.checked) ? 'block' : 'none';
+    }
+
+    verifySignatureCheckbox.addEventListener('change', updateVisibilityBasedOnSignature);
+    keyOptionExisting.addEventListener('change', updateKeyOptions);
+    keyOptionManual.addEventListener('change', updateKeyOptions);
+
+    // Initialize
+    updateVisibilityBasedOnSignature();
+    updateKeyOptions();
+});
+</script>
+{% endblock %}

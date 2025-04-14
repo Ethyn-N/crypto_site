@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Your Profile</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ current_user.username }}</p>
+                <p><strong>Member Since:</strong> {{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'N/A' }}</p>
+
+                <hr>
+
+                <h5>Actions</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{{ url_for('generate_reset_link') }}" class="btn btn-outline-primary btn-sm mt-2">Reset Password</a></li>
+                    <li><a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm mt-2">Log Out</a></li>
+                    <li>
+                        <form action="{{ url_for('delete_account') }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete your account? This action cannot be undone.');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm mt-2">Delete My Account</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Login - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Login</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username:</label>
+                        {{ form.username(class="form-control", id="username", placeholder="Enter your username") }}
+                        {% if form.username.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.username.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password:</label>
+                        {{ form.password(class="form-control", id="password", placeholder="Enter your password") }}
+                        {% if form.password.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.password.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between">
+                    <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+                    <p class="mb-0"><a href="/reset_password">Forgot password?</a></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>About CryptoSite</h4>
+            </div>
+            <div class="card-body">
+                <p>CryptoSite provides a secure web interface for cryptographic operations:</p>
+                <ul>
+                    <li>Encrypt and decrypt files using various algorithms (AES, 3DES, RSA)</li>
+                    <li>Generate and manage cryptographic keys</li>
+                    <li>Create secure hashes of files and compare hash values</li>
+                    <li>Generate strong passwords</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

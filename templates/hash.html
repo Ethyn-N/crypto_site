@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Hash File - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Hash File</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">File to Hash:</label>
+                        {{ form.file(class="form-control") }}
+                        {% if form.file.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.file.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="hash_method" class="form-label">Hash Method:</label>
+                        {{ form.hash_method(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="save_hash" class="form-check-label">
+                            <input type="checkbox" class="form-check-input" id="save_hash" name="save_hash" value="1" checked>
+                            Save hash result to my account
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Generate Hash</button>
+                    <a href="/dashboard" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Hash Result</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    Hash generated successfully.
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Filename:</strong> {{ result.filename }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Hash Method:</strong> {{ result.method }}
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Hash Value:</label>
+                    <div class="hash-result">{{ result.hash_value }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-success" id="copy_hash_btn">Copy Hash</button>
+                    <a href="/compare?hash1={{ result.hash_value }}" class="btn btn-sm btn-primary">Compare With Another Hash</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyHashBtn = document.getElementById('copy_hash_btn');
+    if (copyHashBtn) {
+        copyHashBtn.addEventListener('click', function() {
+            const hashText = document.querySelector('.hash-result').textContent;
+            navigator.clipboard.writeText(hashText).then(function() {
+                copyHashBtn.textContent = 'Copied!';
+                setTimeout(function() {
+                    copyHashBtn.textContent = 'Copy Hash';
+                }, 2000);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

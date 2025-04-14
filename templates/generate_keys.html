@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Keys - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Generate New Key</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="key_name" class="form-label">Key Name:</label>
+                        <input type="text" class="form-control" id="key_name" name="key_name" required>
+                        <div class="form-text">Give your key a meaningful name for easy reference.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="key_type" class="form-label">Key Type:</label>
+                        {{ form.key_type(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3" id="key_size_field">
+                        <label for="key_size" class="form-label">Key Size:</label>
+                        {{ form.key_size(class="form-select") }}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Generate Key</button>
+                    <a href="/keys" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if new_key %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Generated Key</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    Your key has been generated successfully and saved to your account.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Key Type:</label>
+                    <div class="form-control bg-light">{{ new_key.algorithm }}</div>
+                </div>
+                
+                {% if new_key.key_type == 'symmetric' %}
+                <div class="mb-3">
+                    <label class="form-label">Key Value:</label>
+                    <div class="form-control bg-light overflow-auto" style="height: 100px;">
+                        <pre>{{ new_key.key_value }}</pre>
+                    </div>
+                </div>
+                {% else %}
+                <div class="mb-3">
+                    <label class="form-label">Public Key:</label>
+                    <div class="form-control bg-light overflow-auto" style="height: 100px;">
+                        <pre>{{ new_key.public_key }}</pre>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Private Key:</label>
+                    <div class="form-control bg-light overflow-auto" style="height: 100px;">
+                        <pre>{{ new_key.private_key }}</pre>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="alert alert-warning">
+                    <strong>Important:</strong> Make sure to save your keys if you need to access them outside this system. For security reasons, private keys are not displayed again after leaving this page.
+                </div>
+                
+                <a href="/keys/{{ new_key.id }}/download" class="btn btn-primary">Download Key</a>
+                <a href="/keys" class="btn btn-secondary">Back to Key Management</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keyTypeSelect = document.getElementById('key_type');
+    const keySizeField = document.getElementById('key_size_field');
+    
+    function updateKeySizeVisibility() {
+        // Only show key size field for RSA keys
+        if (keyTypeSelect.value === 'rsa') {
+            keySizeField.style.display = 'block';
+        } else {
+            keySizeField.style.display = 'none';
+        }
+    }
+    
+    keyTypeSelect.addEventListener('change', updateKeySizeVisibility);
+    updateKeySizeVisibility();
+});
+</script>
+{% endblock %}

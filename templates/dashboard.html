@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome, {{ current_user.username }}</h2>
+        <p>This is your cryptographic dashboard. Use the options below or the navigation bar to access different features.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>File Operations</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/encrypt" class="btn btn-primary">Encrypt a File</a>
+                    <a href="/decrypt" class="btn btn-success">Decrypt a File</a>
+                    <a href="/hash" class="btn btn-info">Hash a File</a>
+                    <a href="/compare" class="btn btn-secondary">Compare Hash Values</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Key Management</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/keys" class="btn btn-primary">Key Management</a>
+                    <a href="/keys/generate" class="btn btn-success">Generate New Keys</a>
+                    <a href="/shared_keys" class="btn btn-info">Shared Keys</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Tools</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/password_generator" class="btn btn-warning">Password Generator</a>
+                    <a href="/files" class="btn btn-secondary">My Files</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>Recent Activity</h4>
+            </div>
+            <div class="card-body">
+                {% if recent_files %}
+                <div class="file-list">
+                    {% for file in recent_files %}
+                    <div class="file-item">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>{{ file.filename }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-{{ file.type_class }}">{{ file.type }}</span>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                {{ file.date }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No recent activity to display.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

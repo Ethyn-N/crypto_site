@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}My Files - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>My Files</h2>
+        <p>Manage your uploaded, encrypted, and decrypted files here.</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="fileTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">All Files</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="original-tab" data-bs-toggle="tab" data-bs-target="#original" type="button" role="tab" aria-controls="original" aria-selected="false">Original</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="encrypted-tab" data-bs-toggle="tab" data-bs-target="#encrypted" type="button" role="tab" aria-controls="encrypted" aria-selected="false">Encrypted</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="decrypted-tab" data-bs-toggle="tab" data-bs-target="#decrypted" type="button" role="tab" aria-controls="decrypted" aria-selected="false">Decrypted</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="fileTabsContent">
+                    <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+                        {% if files %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Type</th>
+                                        <th>Created</th>
+                                        <th>Method</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in files %}
+                                    <tr>
+                                        <td>{{ file.original_filename }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if file.file_type == 'original' %}primary{% elif file.file_type == 'encrypted' %}warning{% else %}success{% endif %}">
+                                                {{ file.file_type|capitalize }}
+                                            </span>
+                                        </td>
+                                        <td>{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ file.encryption_method or '-' }}</td>
+                                        <td>
+                                            <a href="/files/{{ file.id }}/download" class="btn btn-sm btn-primary">Download</a>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFileModal{{ file.id }}">Delete</button>
+                                            
+                                            {% if file.file_type == 'original' %}
+                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt</a>
+                                            {% elif file.file_type == 'encrypted' %}
+                                            <a href="/decrypt?file_id={{ file.id }}" class="btn btn-sm btn-success">Decrypt</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Delete Confirmation Modal -->
+                                    <div class="modal fade" id="deleteFileModal{{ file.id }}" tabindex="-1" aria-labelledby="deleteFileModalLabel{{ file.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteFileModalLabel{{ file.id }}">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete "{{ file.original_filename }}"? This action cannot be undone.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <a href="/files/{{ file.id }}/delete" class="btn btn-danger">Delete</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            You don't have any files yet. Try <a href="/encrypt">encrypting</a> or <a href="/decrypt">decrypting</a> a file.
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="tab-pane fade" id="original" role="tabpanel" aria-labelledby="original-tab">
+                        {% set original_files = files|selectattr('file_type', 'equalto', 'original')|list %}
+                        {% if original_files %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in original_files %}
+                                    <tr>
+                                        <td>{{ file.original_filename }}</td>
+                                        <td>{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <a href="/files/{{ file.id }}/download" class="btn btn-sm btn-primary">Download</a>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFileModal{{ file.id }}">Delete</button>
+                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            You don't have any original files yet.
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="tab-pane fade" id="encrypted" role="tabpanel" aria-labelledby="encrypted-tab">
+                        {% set encrypted_files = files|selectattr('file_type', 'equalto', 'encrypted')|list %}
+                        {% if encrypted_files %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Created</th>
+                                        <th>Method</th>
+                                        <th>Key</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in encrypted_files %}
+                                    <tr>
+                                        <td>{{ file.original_filename }}</td>
+                                        <td>{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ file.encryption_method }}</td>
+                                        <td>
+                                            {% if file.key %}
+                                            <a href="/keys/{{ file.key_id }}">{{ file.key.name }}</a>
+                                            {% else %}
+                                            One-time key
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="/files/{{ file.id }}/download" class="btn btn-sm btn-primary">Download</a>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFileModal{{ file.id }}">Delete</button>
+                                            <a href="/decrypt?file_id={{ file.id }}" class="btn btn-sm btn-success">Decrypt</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            You don't have any encrypted files yet. Try <a href="/encrypt">encrypting a file</a>.
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="tab-pane fade" id="decrypted" role="tabpanel" aria-labelledby="decrypted-tab">
+                        {% set decrypted_files = files|selectattr('file_type', 'equalto', 'decrypted')|list %}
+                        {% if decrypted_files %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in decrypted_files %}
+                                    <tr>
+                                        <td>{{ file.original_filename }}</td>
+                                        <td>{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <a href="/files/{{ file.id }}/download" class="btn btn-sm btn-primary">Download</a>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFileModal{{ file.id }}">Delete</button>
+                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt Again</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            You don't have any decrypted files yet. Try <a href="/decrypt">decrypting a file</a>.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

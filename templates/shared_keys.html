@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Shared Keys - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Shared Keys</h2>
+        <p>Manage keys that have been shared with you or that you've shared with others.</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-8">
+        <ul class="nav nav-tabs" id="sharedKeysTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="received-tab" data-bs-toggle="tab" data-bs-target="#received" type="button" role="tab" aria-controls="received" aria-selected="true">Keys Shared With Me</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="shared-tab" data-bs-toggle="tab" data-bs-target="#shared" type="button" role="tab" aria-controls="shared" aria-selected="false">Keys I've Shared</button>
+            </li>
+        </ul>
+        <div class="tab-content mt-3" id="sharedKeysTabsContent">
+            <div class="tab-pane fade show active" id="received" role="tabpanel" aria-labelledby="received-tab">
+                {% if received_keys %}
+                <div class="list-group">
+                    {% for shared_key in received_keys %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ shared_key.name }}</h5>
+                            <small>Shared on {{ shared_key.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">Original key: <strong>{{ shared_key.key.name }}</strong> ({{ shared_key.key.algorithm }})</p>
+                        <p class="mb-1">Shared by: <strong>{{ shared_key.sender.username }}</strong></p>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#sharedKey{{ shared_key.id }}Content" aria-expanded="false">
+                                Show Key Details
+                            </button>
+                            <div class="collapse mt-2" id="sharedKey{{ shared_key.id }}Content">
+                                <div class="card card-body">
+                                    {% if shared_key.key.key_type == 'symmetric' %}
+                                    <div class="mb-2">
+                                        <strong>Key Value:</strong>
+                                        <pre class="mb-0 mt-1">{{ shared_key.key.key_value }}</pre>
+                                    </div>
+                                    {% else %}
+                                    <div class="mb-2">
+                                        <strong>Public Key:</strong>
+                                        <pre class="mb-0 mt-1">{{ shared_key.key.public_key }}</pre>
+                                    </div>
+                                    {% if shared_key.include_private_key %}
+                                    <div>
+                                        <strong>Private Key:</strong>
+                                        <pre class="mb-0 mt-1">{{ shared_key.key.private_key }}</pre>
+                                    </div>
+                                    {% else %}
+                                    <div class="text-muted">
+                                        <em>Private key not shared</em>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No keys have been shared with you yet.
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-pane fade" id="shared" role="tabpanel" aria-labelledby="shared-tab">
+                {% if shared_by_me %}
+                <div class="list-group">
+                    {% for shared_key in shared_by_me %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ shared_key.name }}</h5>
+                            <small>Shared on {{ shared_key.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">Original key: <strong>{{ shared_key.key.name }}</strong> ({{ shared_key.key.algorithm }})</p>
+                        <p class="mb-1">Shared with: <strong>{{ shared_key.recipient.username }}</strong></p>
+                        {% if shared_key.key.key_type == 'asymmetric' %}
+                        <p class="mb-1">
+                            <span class="badge bg-info">{% if shared_key.include_private_key %}Complete Key Pair{% else %}Public Key Only{% endif %}</span>
+                        </p>
+                        {% endif %}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#revokeKeyModal{{ shared_key.id }}">
+                                Revoke Access
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Revoke Access Confirmation Modal -->
+                    <div class="modal fade" id="revokeKeyModal{{ shared_key.id }}" tabindex="-1" aria-labelledby="revokeKeyModalLabel{{ shared_key.id }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="revokeKeyModalLabel{{ shared_key.id }}">Confirm Revoke Access</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to revoke access to this key for {{ shared_key.recipient.username }}? They will no longer be able to access it.
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a href="/shared_keys/{{ shared_key.id }}/revoke" class="btn btn-danger">Revoke Access</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    You haven't shared any keys with others yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Share a Key</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="key_id" class="form-label">Select Key to Share:</label>
+                        <select class="form-select" id="key_id" name="key_id" required>
+                            <option value="">-- Select a key --</option>
+                            {% if keys %}
+                                {% for key in keys %}
+                                <option value="{{ key.id }}" data-type="{{ key.key_type }}">{{ key.name }} ({{ key.algorithm }})</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="private_key_option" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="include_private_key" name="include_private_key">
+                            <label class="form-check-label" for="include_private_key">
+                                Include private key (not recommended for security)
+                            </label>
+                            <div class="form-text text-danger">
+                                For asymmetric keys, only the public key is shared by default. Sharing the private key should be done only in exceptional circumstances.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username to Share With:</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="form-text">Enter the username of the person you want to share with</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="share_name" class="form-label">Name for Shared Key:</label>
+                        <input type="text" class="form-control" id="share_name" name="share_name" required>
+                        <div class="form-text">This is how the key will appear to the recipient</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Share Key</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keySelect = document.getElementById('key_id');
+    const privateKeyOption = document.getElementById('private_key_option');
+    
+    keySelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.getAttribute('data-type') === 'asymmetric') {
+            privateKeyOption.style.display = 'block';
+        } else {
+            privateKeyOption.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

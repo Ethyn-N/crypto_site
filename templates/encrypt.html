@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Encrypt File - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Encrypt File</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">File to Encrypt:</label>
+                        {{ form.file(class="form-control") }}
+                        {% if form.file.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.file.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="encryption_method" class="form-label">Encryption Method:</label>
+                        {{ form.encryption_method(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3" id="iv_section" style="display:none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="customize_iv" name="customize_iv">
+                            <label class="form-check-label" for="customize_iv">
+                                Customize Initialization Vector (IV)
+                            </label>
+                        </div>
+                        
+                        <div id="iv_input_section" style="display:none;">
+                            <label for="iv" class="form-label">Initialization Vector:</label>
+                            <input type="text" class="form-control" id="iv" name="iv" placeholder="Enter base64-encoded IV">
+                            <div class="form-text">
+                                <p>The IV must be the proper length for the selected algorithm:</p>
+                                <ul>
+                                    <li>AES: 16 bytes (base64-encoded)</li>
+                                    <li>3DES: 8 bytes (base64-encoded)</li>
+                                </ul>
+                                <p class="text-danger">An invalid IV will cause an error.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="sign_file_section" style="display:none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="sign_file" name="sign_file" value="1">
+                            <label class="form-check-label" for="sign_file">
+                                Sign file with my private key (for authentication)
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Signing the file proves you are the sender. Recipients with your public key can verify it was encrypted by you.
+                        </div>
+                    </div>
+                    
+                    <div id="signing_key_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="signing_key" class="form-label">Select Signing Key:</label>
+                            <select class="form-select" id="signing_key" name="signing_key">
+                                <option value="">-- Select a private key for signing --</option>
+                                {% if asymmetric_keys %}
+                                <optgroup label="Asymmetric Keys (Private Keys)">
+                                    {% for key in asymmetric_keys %}
+                                    <option value="{{ key.id }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                            <div class="form-text">
+                                Choose one of your private keys to sign this file.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="key_selection_section">
+                        <label class="form-label">Key Selection:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_new" value="new" checked>
+                            <label class="form-check-label" for="key_option_new">
+                                Generate a new key
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_existing" value="existing">
+                            <label class="form-check-label" for="key_option_existing">
+                                Use an existing key
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_manual" value="manual">
+                            <label class="form-check-label" for="key_option_manual">
+                                Enter key manually
+                            </label>
+                        </div>
+                        <div class="form-check" id="public_key_option_div" style="display:none;">
+                            <input class="form-check-input" type="radio" name="key_option" id="key_option_public" value="public">
+                            <label class="form-check-label" for="key_option_public">
+                                Use someone's public key
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="existing_key_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="existing_key" class="form-label">Select Key:</label>
+                            <select class="form-select" id="existing_key" name="existing_key">
+                                <option value="">-- Select a key --</option>
+                                {% if symmetric_keys %}
+                                <optgroup label="Symmetric Keys">
+                                    {% for key in symmetric_keys %}
+                                    <option value="sym_{{ key.id }}" data-type="symmetric" data-algorithm="{{ key.algorithm }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                                
+                                {% if asymmetric_keys %}
+                                <optgroup label="Asymmetric Keys (Public Keys)">
+                                    {% for key in asymmetric_keys %}
+                                    <option value="asym_{{ key.id }}" data-type="asymmetric" data-algorithm="{{ key.algorithm }}">
+                                        {{ key.name }} ({{ key.algorithm }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="manual_key_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="manual_key" class="form-label">Enter Key Manually:</label>
+                            <textarea class="form-control" id="manual_key" name="manual_key" rows="4"></textarea>
+                            <div class="form-text">Paste your key here if you have it saved elsewhere.</div>
+                        </div>
+                    </div>
+                    
+                    <div id="public_key_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="public_key_input" class="form-label">Enter Public Key:</label>
+                            <textarea class="form-control" id="public_key_input" name="public_key_input" rows="6" placeholder="-----BEGIN PUBLIC KEY-----&#10;(Paste recipient's public key here)&#10;-----END PUBLIC KEY-----"></textarea>
+                            <div class="form-text">
+                                Paste the recipient's public key here. This will encrypt the file so that only they can decrypt it with their private key.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="shared_keys_section" style="display: none;">
+                        <div class="mb-3">
+                            <label for="shared_key" class="form-label">Select Recipient's Public Key:</label>
+                            <select class="form-select" id="shared_key" name="shared_key">
+                                <option value="">-- Select a shared key --</option>
+                                {% if shared_public_keys %}
+                                <optgroup label="Public Keys Shared With You">
+                                    {% for key in shared_public_keys %}
+                                    <option value="shared_{{ key.id }}">
+                                        {{ key.name }} (from {{ key.owner.username }})
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="save_output" class="form-check-label">
+                            <input type="checkbox" class="form-check-input" id="save_output" name="save_output" value="1" checked>
+                            Save encrypted file to my account
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Encrypt</button>
+                    <a href="/dashboard" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Encryption Result</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    Your file has been encrypted successfully.
+                </div>
+                
+                <div class="mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Original Filename:</strong> {{ result.original_filename }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Encrypted Filename:</strong> {{ result.encrypted_filename }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Encryption Method:</strong> {{ result.method }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Key ID:</strong> {{ result.key_id or 'One-time use' }}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if result.signed %}
+                <div class="mb-3">
+                    <div class="alert alert-info">
+                        <i class="fas fa-signature"></i> This file has been signed with your private key: <strong>{{ result.signing_key_name }}</strong>
+                        <p>Recipients can verify it was encrypted by you using your public key.</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if result.key_value %}
+                <div class="mb-3">
+                    <label class="form-label">Encryption Key:</label>
+                    <div class="form-control bg-light overflow-auto" style="height: 80px;">
+                        <pre>{{ result.key_value }}</pre>
+                    </div>
+                    <div class="form-text text-danger">
+                        This key will be needed to decrypt the file. Please save it securely.
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-success" id="copy_key_btn">Copy Key</button>
+                    {% if result.key_id %}
+                    <a href="/keys/{{ result.key_id }}/download" class="btn btn-sm btn-primary">Download Key</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <a href="/files/{{ result.file_id }}/download" class="btn btn-primary">Download Encrypted File</a>
+                    <a href="/encrypt" class="btn btn-secondary">Encrypt Another File</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keyOptionNew = document.getElementById('key_option_new');
+    const keyOptionExisting = document.getElementById('key_option_existing');
+    const keyOptionManual = document.getElementById('key_option_manual');
+    const keyOptionPublic = document.getElementById('key_option_public');
+    const existingKeySection = document.getElementById('existing_key_section');
+    const manualKeySection = document.getElementById('manual_key_section');
+    const publicKeySection = document.getElementById('public_key_section');
+    const sharedKeysSection = document.getElementById('shared_keys_section');
+    const keySelectionSection = document.getElementById('key_selection_section');
+    const encryptionMethodSelect = document.getElementById('encryption_method');
+    const existingKeySelect = document.getElementById('existing_key');
+    const publicKeyOptionDiv = document.getElementById('public_key_option_div');
+    const ivSection = document.getElementById('iv_section');
+    const customizeIvCheckbox = document.getElementById('customize_iv');
+    const ivInputSection = document.getElementById('iv_input_section');
+    const signFileSection = document.getElementById('sign_file_section');
+    const signFileCheckbox = document.getElementById('sign_file');
+    const signingKeySection = document.getElementById('signing_key_section');
+    
+    // Copy key button functionality
+    const copyKeyBtn = document.getElementById('copy_key_btn');
+    if (copyKeyBtn) {
+        copyKeyBtn.addEventListener('click', function() {
+            const keyText = document.querySelector('pre').textContent;
+            navigator.clipboard.writeText(keyText).then(function() {
+                copyKeyBtn.textContent = 'Copied!';
+                setTimeout(function() {
+                    copyKeyBtn.textContent = 'Copy Key';
+                }, 2000);
+            });
+        });
+    }
+    
+    // Show/hide IV section based on encryption method
+    function updateIvSection() {
+        const method = encryptionMethodSelect.value;
+        if (method.includes('cbc') || method.includes('ctr')) {
+            ivSection.style.display = 'block';
+        } else {
+            ivSection.style.display = 'none';
+            customizeIvCheckbox.checked = false;
+            ivInputSection.style.display = 'none';
+        }
+    }
+    
+    // Show/hide IV input based on checkbox
+    customizeIvCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            ivInputSection.style.display = 'block';
+        } else {
+            ivInputSection.style.display = 'none';
+        }
+    });
+    
+    // Show/hide public key option and signing section based on encryption method
+    function updateEncryptionOptions() {
+        const method = encryptionMethodSelect.value;
+        if (method === 'rsa') {
+            publicKeyOptionDiv.style.display = 'block';
+            signFileSection.style.display = 'block';
+        } else {
+            publicKeyOptionDiv.style.display = 'none';
+            signFileSection.style.display = 'none';
+            signFileCheckbox.checked = false;
+            signingKeySection.style.display = 'none';
+            if (keyOptionPublic && keyOptionPublic.checked) {
+                keyOptionNew.checked = true;
+            }
+        }
+    }
+    
+    // Handle signing option
+    signFileCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            signingKeySection.style.display = 'block';
+            keySelectionSection.style.display = 'none';
+            existingKeySection.style.display = 'none';
+            manualKeySection.style.display = 'none';
+            publicKeySection.style.display = 'none';
+            sharedKeysSection.style.display = 'none';
+        } else {
+            signingKeySection.style.display = 'none';
+            keySelectionSection.style.display = 'block';
+            updateKeyOptions();
+        }
+    });
+    
+    function updateKeyOptions() {
+        // First check if signing is active - if so, hide all key selection
+        if (signFileCheckbox.checked) {
+            return;
+        }
+        
+        // Hide all sections first
+        existingKeySection.style.display = 'none';
+        manualKeySection.style.display = 'none';
+        publicKeySection.style.display = 'none';
+        sharedKeysSection.style.display = 'none';
+        
+        // Show appropriate section based on selection
+        if (keyOptionExisting && keyOptionExisting.checked) {
+            existingKeySection.style.display = 'block';
+            
+            // Filter available keys based on encryption method
+            const method = encryptionMethodSelect.value;
+            const options = existingKeySelect.querySelectorAll('option');
+            
+            options.forEach(function(option) {
+                if (option.value === '') return; // Skip the placeholder option
+                
+                const keyType = option.getAttribute('data-type');
+                const keyAlgorithm = option.getAttribute('data-algorithm');
+                
+                if (method === 'rsa' && keyType === 'asymmetric') {
+                    option.style.display = '';
+                } else if (method.startsWith('aes') && keyAlgorithm && keyAlgorithm.startsWith('AES')) {
+                    option.style.display = '';
+                } else if (method === '3des-cbc' && keyAlgorithm && keyAlgorithm.includes('3DES')) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        } else if (keyOptionManual && keyOptionManual.checked) {
+            manualKeySection.style.display = 'block';
+        } else if (keyOptionPublic && keyOptionPublic.checked) {
+            if (document.querySelector('#shared_key option[value^="shared_"]')) {
+                sharedKeysSection.style.display = 'block';
+                publicKeySection.style.display = 'none';
+            } else {
+                publicKeySection.style.display = 'block';
+                sharedKeysSection.style.display = 'none';
+            }
+        }
+    }
+    
+    // Event listeners
+    encryptionMethodSelect.addEventListener('change', function() {
+        updateIvSection();
+        updateEncryptionOptions();
+        updateKeyOptions();
+    });
+    
+    if (keyOptionNew) keyOptionNew.addEventListener('change', updateKeyOptions);
+    if (keyOptionExisting) keyOptionExisting.addEventListener('change', updateKeyOptions);
+    if (keyOptionManual) keyOptionManual.addEventListener('change', updateKeyOptions);
+    if (keyOptionPublic) keyOptionPublic.addEventListener('change', function() {
+        updateKeyOptions();
+        // When public key option is selected, toggle between shared keys and manual input
+        if (this.checked) {
+            if (document.querySelector('#shared_key option[value^="shared_"]')) {
+                sharedKeysSection.style.display = 'block';
+                publicKeySection.style.display = 'none';
+            } else {
+                publicKeySection.style.display = 'block';
+                sharedKeysSection.style.display = 'none';
+            }
+        }
+    });
+    
+    // Initialize
+    updateIvSection();
+    updateEncryptionOptions();
+    updateKeyOptions();
+});
+</script>
+{% endblock %}

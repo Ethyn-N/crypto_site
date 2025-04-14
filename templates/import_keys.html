@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Import Key - CryptoSite{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Import Existing Key</h3>
+            </div>
+            <div class="card-body">
+                <p>Use this form to import a key that you already have. This allows you to use keys generated outside of this system.</p>
+                
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="mb-3">
+                        <label for="key_name" class="form-label">Key Name:</label>
+                        <input type="text" class="form-control" id="key_name" name="key_name" required>
+                        <div class="form-text">Give your key a meaningful name for easy reference.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="key_type" class="form-label">Key Type:</label>
+                        <select class="form-select" id="key_type" name="key_type" required>
+                            <option value="">-- Select key type --</option>
+                            <optgroup label="Symmetric Keys">
+                                <option value="aes-128">AES-128</option>
+                                <option value="aes-256">AES-256</option>
+                                <option value="3des">3DES (Triple DES)</option>
+                            </optgroup>
+                            <optgroup label="Asymmetric Keys">
+                                <option value="rsa">RSA</option>
+                                <option value="dh">Diffie-Hellman</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div id="symmetric_key_section">
+                        <div class="mb-3">
+                            <label for="symmetric_key" class="form-label">Key Value:</label>
+                            <textarea class="form-control" id="symmetric_key" name="symmetric_key" rows="5" placeholder="Paste your key here"></textarea>
+                            <div class="form-text">Paste your base64-encoded key here.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="key_file" class="form-label">Or upload a key file:</label>
+                            <input type="file" class="form-control" id="key_file" name="key_file">
+                        </div>
+                    </div>
+                    
+                    <div id="asymmetric_key_section" style="display: none;">
+                        <div class="alert alert-info">
+                            For asymmetric keys, you'll need to provide both the public and private keys.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="public_key" class="form-label">Public Key:</label>
+                            <textarea class="form-control" id="public_key" name="public_key" rows="5" placeholder="Paste your public key here (usually starts with -----BEGIN PUBLIC KEY-----)"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="private_key" class="form-label">Private Key:</label>
+                            <textarea class="form-control" id="private_key" name="private_key" rows="5" placeholder="Paste your private key here (usually starts with -----BEGIN PRIVATE KEY-----)"></textarea>
+                            <div class="form-text">Leave blank if you only have the public key.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="keypair_file" class="form-label">Or upload a keypair file:</label>
+                            <input type="file" class="form-control" id="keypair_file" name="keypair_file">
+                            <div class="form-text">The file should contain both public and private keys.</div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Import Key</button>
+                    <a href="/keys" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Key Import Guidelines</h4>
+            </div>
+            <div class="card-body">
+                <p>When importing keys, please keep in mind:</p>
+                <ul>
+                    <li><strong>Symmetric keys</strong> (AES, 3DES) should be base64-encoded strings.</li>
+                    <li><strong>RSA keys</strong> should be in PEM format (base64-encoded with header/footer).</li>
+                    <li>For <strong>Diffie-Hellman</strong> keys, include both the public and private components.</li>
+                    <li>Key sizes must be standard for the algorithm (e.g., AES-128: 16 bytes, AES-256: 32 bytes).</li>
+                    <li>Imported keys will be stored in your account's key repository and can be used like any other key.</li>
+                </ul>
+                <p class="mb-0 text-danger">Important: Make sure you trust the source of any keys you import!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keyTypeSelect = document.getElementById('key_type');
+    const symmetricKeySection = document.getElementById('symmetric_key_section');
+    const asymmetricKeySection = document.getElementById('asymmetric_key_section');
+    
+    function updateKeySections() {
+        const keyType = keyTypeSelect.value;
+        
+        if (keyType === 'aes-128' || keyType === 'aes-256' || keyType === '3des') {
+            // Symmetric key
+            symmetricKeySection.style.display = 'block';
+            asymmetricKeySection.style.display = 'none';
+        } else if (keyType === 'rsa' || keyType === 'dh') {
+            // Asymmetric key
+            symmetricKeySection.style.display = 'none';
+            asymmetricKeySection.style.display = 'block';
+        } else {
+            // No selection yet
+            symmetricKeySection.style.display = 'block';
+            asymmetricKeySection.style.display = 'none';
+        }
+    }
+    
+    keyTypeSelect.addEventListener('change', updateKeySections);
+    updateKeySections();
+});
+</script>
+{% endblock %}
