@@ -44,6 +44,7 @@ class HashForm(FlaskForm):
         ('sha3-256', 'SHA3-256'),
         ('sha3-512', 'SHA3-512')
     ])
+    save_hash = BooleanField('Save hash result to my account')
     submit = SubmitField('Generate Hash')
 
 class CompareHashesForm(FlaskForm):

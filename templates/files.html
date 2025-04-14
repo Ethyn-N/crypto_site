@@ -6,7 +6,7 @@
 <div class="row">
     <div class="col-12">
         <h2>My Files</h2>
-        <p>Manage your uploaded, encrypted, and decrypted files here.</p>
+        <p>Manage your uploaded, encrypted, decrypted files, and file hashes here.</p>
     </div>
 </div>
 
@@ -16,22 +16,25 @@
             <div class="card-header">
                 <ul class="nav nav-tabs card-header-tabs" id="fileTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">All Files</button>
+                        <button class="nav-link {% if selected_tab == 'all' or not selected_tab %}active{% endif %}" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="{{ 'true' if selected_tab == 'all' or not selected_tab else 'false' }}">All Files</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="original-tab" data-bs-toggle="tab" data-bs-target="#original" type="button" role="tab" aria-controls="original" aria-selected="false">Original</button>
+                        <button class="nav-link {% if selected_tab == 'original' %}active{% endif %}" id="original-tab" data-bs-toggle="tab" data-bs-target="#original" type="button" role="tab" aria-controls="original" aria-selected="{{ 'true' if selected_tab == 'original' else 'false' }}">Original</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="encrypted-tab" data-bs-toggle="tab" data-bs-target="#encrypted" type="button" role="tab" aria-controls="encrypted" aria-selected="false">Encrypted</button>
+                        <button class="nav-link {% if selected_tab == 'encrypted' %}active{% endif %}" id="encrypted-tab" data-bs-toggle="tab" data-bs-target="#encrypted" type="button" role="tab" aria-controls="encrypted" aria-selected="{{ 'true' if selected_tab == 'encrypted' else 'false' }}">Encrypted</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="decrypted-tab" data-bs-toggle="tab" data-bs-target="#decrypted" type="button" role="tab" aria-controls="decrypted" aria-selected="false">Decrypted</button>
+                        <button class="nav-link {% if selected_tab == 'decrypted' %}active{% endif %}" id="decrypted-tab" data-bs-toggle="tab" data-bs-target="#decrypted" type="button" role="tab" aria-controls="decrypted" aria-selected="{{ 'true' if selected_tab == 'decrypted' else 'false' }}">Decrypted</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if selected_tab == 'hashes' %}active{% endif %}" id="hashes-tab" data-bs-toggle="tab" data-bs-target="#hashes" type="button" role="tab" aria-controls="hashes" aria-selected="{{ 'true' if selected_tab == 'hashes' else 'false' }}">Hashes</button>
                     </li>
                 </ul>
             </div>
             <div class="card-body">
                 <div class="tab-content" id="fileTabsContent">
-                    <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+                    <div class="tab-pane fade {{ 'show active' if selected_tab == 'all' or not selected_tab else '' }}" id="all" role="tabpanel" aria-labelledby="all-tab">
                         {% if files %}
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -63,6 +66,8 @@
                                             <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt</a>
                                             {% elif file.file_type == 'encrypted' %}
                                             <a href="/decrypt?file_id={{ file.id }}" class="btn btn-sm btn-success">Decrypt</a>
+                                            {% elif file.file_type == 'decrypted' %}
+                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt</a>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -96,7 +101,7 @@
                         {% endif %}
                     </div>
                     
-                    <div class="tab-pane fade" id="original" role="tabpanel" aria-labelledby="original-tab">
+                    <div class="tab-pane fade {{ 'show active' if selected_tab == 'original' else '' }}" id="original" role="tabpanel" aria-labelledby="original-tab">
                         {% set original_files = files|selectattr('file_type', 'equalto', 'original')|list %}
                         {% if original_files %}
                         <div class="table-responsive">
@@ -130,7 +135,7 @@
                         {% endif %}
                     </div>
                     
-                    <div class="tab-pane fade" id="encrypted" role="tabpanel" aria-labelledby="encrypted-tab">
+                    <div class="tab-pane fade {{ 'show active' if selected_tab == 'encrypted' else '' }}" id="encrypted" role="tabpanel" aria-labelledby="encrypted-tab">
                         {% set encrypted_files = files|selectattr('file_type', 'equalto', 'encrypted')|list %}
                         {% if encrypted_files %}
                         <div class="table-responsive">
@@ -174,7 +179,7 @@
                         {% endif %}
                     </div>
                     
-                    <div class="tab-pane fade" id="decrypted" role="tabpanel" aria-labelledby="decrypted-tab">
+                    <div class="tab-pane fade {{ 'show active' if selected_tab == 'decrypted' else '' }}" id="decrypted" role="tabpanel" aria-labelledby="decrypted-tab">
                         {% set decrypted_files = files|selectattr('file_type', 'equalto', 'decrypted')|list %}
                         {% if decrypted_files %}
                         <div class="table-responsive">
@@ -194,7 +199,7 @@
                                         <td>
                                             <a href="/files/{{ file.id }}/download" class="btn btn-sm btn-primary">Download</a>
                                             <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFileModal{{ file.id }}">Delete</button>
-                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt Again</a>
+                                            <a href="/encrypt?file_id={{ file.id }}" class="btn btn-sm btn-warning">Encrypt</a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -207,9 +212,88 @@
                         </div>
                         {% endif %}
                     </div>
+                    
+                    <!-- Hash Records Tab -->
+                    <div class="tab-pane fade {{ 'show active' if selected_tab == 'hashes' else '' }}" id="hashes" role="tabpanel" aria-labelledby="hashes-tab">
+                        <div class="d-flex justify-content-end mb-3">
+                            <a href="/hash" class="btn btn-primary">Generate New Hash</a>
+                            <a href="/hashes/export" class="btn btn-secondary ms-2">Export Hashes</a>
+                            <a href="/compare" class="btn btn-info ms-2">Compare Hashes</a>
+                        </div>
+                        
+                        {% if hashes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Hash Method</th>
+                                        <th>Hash Value</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hash in hashes %}
+                                    <tr>
+                                        <td>{{ hash.filename }}</td>
+                                        <td>{{ hash.hash_method|upper }}</td>
+                                        <td>
+                                            <div class="hash-value text-truncate" style="max-width: 250px;" title="{{ hash.hash_value }}">
+                                                {{ hash.hash_value }}
+                                            </div>
+                                        </td>
+                                        <td>{{ hash.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary copy-hash" data-hash="{{ hash.hash_value }}">Copy</button>
+                                            <form method="post" action="/hashes/{{ hash.id }}/delete" class="d-inline">
+                                                <input type="hidden" name="from_tab" value="hashes">
+                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this hash record?');">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            You don't have any saved hash records yet. Try <a href="/hash">hashing a file</a>.
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle hash copying
+        const copyButtons = document.querySelectorAll('.copy-hash');
+        copyButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const hash = this.getAttribute('data-hash');
+                navigator.clipboard.writeText(hash).then(() => {
+                    // Change button text temporarily
+                    const originalText = this.textContent;
+                    this.textContent = 'Copied!';
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                    }, 2000);
+                });
+            });
+        });
+        
+        // Activate tab based on URL hash if present
+        const hashValue = window.location.hash.substr(1);
+        if (hashValue) {
+            const tab = document.getElementById(`${hashValue}-tab`);
+            if (tab) {
+                tab.click();
+            }
+        }
+    });
+</script>
 {% endblock %}

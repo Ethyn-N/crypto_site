@@ -1,10 +1,11 @@
+import io
 import os
 import base64
 import json
 import uuid
 import tempfile
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, make_response, render_template, request, redirect, url_for, flash, session, send_file
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -346,6 +347,12 @@ def encrypt():
                 'owner': shared.sender
             })
     
+    # Check if a file_id was provided in the query string (from files page)
+    file_from_storage = None
+    if request.args.get('file_id'):
+        file_id = request.args.get('file_id')
+        file_from_storage = File.query.filter_by(id=file_id, user_id=current_user.id).first()
+    
     if form.validate_on_submit():
         file = form.file.data
         encryption_method = form.encryption_method.data
@@ -433,6 +440,18 @@ def encrypt():
         # Read file contents
         file_contents = file.read()
         
+        # Save the original file if requested
+        original_file_id = None
+        if request.form.get('save_original') == '1':
+            # Need to reset the file pointer to save the original
+            file.seek(0)
+            original_file = save_file(file, 'original')
+            original_file_id = original_file.id
+            # Reset file pointer again for encryption
+            file.seek(0)
+            # Make sure we have the file contents again
+            file_contents = file.read()
+        
         # Encrypt the file
         try:
             if signing_key:
@@ -464,6 +483,7 @@ def encrypt():
                                   shared_public_keys=shared_public_keys)
         
         # Save the encrypted file if requested
+        encrypted_file_id = None
         if request.form.get('save_output') == '1':
             # Create a temporary file to store the encrypted data
             temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -489,6 +509,8 @@ def encrypt():
                 encryption_method,
                 key_id
             )
+            
+            encrypted_file_id = db_file.id
             
             # Clean up temporary file
             os.unlink(temp_file.name)
@@ -521,7 +543,8 @@ def encrypt():
                 'encrypted_filename': f"{os.path.splitext(file.filename)[0]}.encrypted",
                 'method': ENCRYPTION_METHODS.get(encryption_method, encryption_method),
                 'key_id': key_id,
-                'file_id': db_file.id
+                'file_id': encrypted_file_id,
+                'original_file_id': original_file_id
             }
             
             # If we have key details to show
@@ -705,19 +728,19 @@ def decrypt():
 @login_required
 def hash_view():
     form = HashForm()
-    
+
     if form.validate_on_submit():
         file = form.file.data
         hash_method = form.hash_method.data
-        
+
         # Read file contents
         file_data = file.read()
-        
+
         # Generate hash
         hash_value = hash_file(file_data, hash_method)
-        
-        # Save hash record if requested
-        if request.form.get('save_hash') == '1':
+
+        # Save hash record if checkbox was selected
+        if form.save_hash.data:
             hash_record = HashRecord(
                 filename=file.filename,
                 hash_value=hash_value,
@@ -726,17 +749,42 @@ def hash_view():
             )
             db.session.add(hash_record)
             db.session.commit()
-        
-        # Provide results to the template
+
+        # Provide result for rendering
         result = {
             'filename': file.filename,
             'method': HASH_METHODS.get(hash_method, hash_method),
             'hash_value': hash_value
         }
-        
+
         return render_template('hash.html', form=form, result=result)
-    
+
     return render_template('hash.html', form=form)
+
+@app.route('/hashes/<int:hash_id>/delete', methods=['POST'])
+@login_required
+def delete_hash(hash_id):
+    hash_record = HashRecord.query.filter_by(id=hash_id, user_id=current_user.id).first_or_404()
+    db.session.delete(hash_record)
+    db.session.commit()
+    flash('Hash deleted successfully.')
+
+    tab = request.form.get('from_tab', 'all')
+    return redirect(url_for('files', tab=tab))
+
+@app.route('/hashes/export')
+@login_required
+def export_hashes():
+    hashes = HashRecord.query.filter_by(user_id=current_user.id).order_by(HashRecord.created_at).all()
+    
+    output = io.StringIO()
+    for h in hashes:
+        output.write(f"{h.filename} | {h.hash_method.upper()} | {h.hash_value}\n")
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=hashes_export.txt"
+    response.headers["Content-Type"] = "text/plain"
+    return response
 
 @app.route('/compare', methods=['GET', 'POST'])
 @login_required
@@ -893,8 +941,10 @@ def delete_key(key_id):
 @app.route('/files')
 @login_required
 def files():
+    selected_tab = request.args.get('tab', 'all')
     user_files = File.query.filter_by(user_id=current_user.id).order_by(File.created_at.desc()).all()
-    return render_template('files.html', files=user_files)
+    saved_hashes = HashRecord.query.filter_by(user_id=current_user.id).order_by(HashRecord.created_at.desc()).all()
+    return render_template('files.html', files=user_files, hashes=saved_hashes, selected_tab=selected_tab)
 
 @app.route('/files/<int:file_id>/download')
 @login_required

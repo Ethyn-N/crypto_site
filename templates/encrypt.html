@@ -178,10 +178,21 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="save_output" class="form-check-label">
+                        <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="save_output" name="save_output" value="1" checked>
-                            Save encrypted file to my account
-                        </label>
+                            <label class="form-check-label" for="save_output">
+                                Save encrypted file to my account
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="save_original" name="save_original" value="1" checked>
+                            <label class="form-check-label" for="save_original">
+                                Save original file to my account
+                            </label>
+                        </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary">Encrypt</button>
@@ -231,6 +242,14 @@
                 </div>
                 {% endif %}
                 
+                {% if result.original_file_id %}
+                <div class="mb-3">
+                    <div class="alert alert-info">
+                        <i class="fas fa-file"></i> The original file has been saved to your account.
+                    </div>
+                </div>
+                {% endif %}
+                
                 {% if result.key_value %}
                 <div class="mb-3">
                     <label class="form-label">Encryption Key:</label>
@@ -252,6 +271,9 @@
                 
                 <div class="mb-3">
                     <a href="/files/{{ result.file_id }}/download" class="btn btn-primary">Download Encrypted File</a>
+                    {% if result.original_file_id %}
+                    <a href="/files/{{ result.original_file_id }}/download" class="btn btn-outline-primary">Download Original File</a>
+                    {% endif %}
                     <a href="/encrypt" class="btn btn-secondary">Encrypt Another File</a>
                 </div>
             </div>

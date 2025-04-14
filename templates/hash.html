@@ -30,12 +30,12 @@
                         {{ form.hash_method(class="form-select") }}
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="save_hash" class="form-check-label">
-                            <input type="checkbox" class="form-check-input" id="save_hash" name="save_hash" value="1" checked>
+                    <div class="form-check mb-3">
+                        {{ form.save_hash(class="form-check-input", id="save_hash") }}
+                        <label class="form-check-label" for="save_hash">
                             Save hash result to my account
                         </label>
-                    </div>
+                    </div>                    
                     
                     <button type="submit" class="btn btn-primary">Generate Hash</button>
                     <a href="/dashboard" class="btn btn-secondary">Cancel</a>
